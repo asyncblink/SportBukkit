@@ -1,0 +1,46 @@
+From 7f3a9a999f177b8e2b392fbbdfb67f97ad8cbbec Mon Sep 17 00:00:00 2001
+From: asyncblink <asyncblink@protonmail.com>
+Date: Mon, 28 Nov 2016 07:12:39 +1300
+Subject: [PATCH] Glare additions
+
+
+diff --git a/pom.xml b/pom.xml
+index b790c9c..279c399 100644
+--- a/pom.xml
++++ b/pom.xml
+@@ -104,6 +104,7 @@
+     </dependencies>
+ 
+     <build>
++        <finalName>sportbukkit-api</finalName>
+         <plugins>
+             <plugin>
+                 <groupId>org.apache.maven.plugins</groupId>
+@@ -164,6 +165,24 @@
+                     <shadedArtifactAttached>true</shadedArtifactAttached>
+                 </configuration>
+             </plugin>
++            <plugin>
++                <artifactId>maven-antrun-plugin</artifactId>
++                <version>1.8</version>
++                <executions>
++                    <execution>
++                        <phase>install</phase>
++                        <configuration>
++                            <target>
++                                <copy file="${project.build.directory}/${project.build.finalName}.jar"
++                                      todir="C:/SSD-Projects/Glare/.lib"/>
++                            </target>
++                        </configuration>
++                        <goals>
++                            <goal>run</goal>
++                        </goals>
++                    </execution>
++                </executions>
++            </plugin>
+         </plugins>
+     </build>
+ </project>
+-- 
+2.10.2.windows.1
+

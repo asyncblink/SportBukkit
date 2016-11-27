@@ -1,0 +1,280 @@
+From d8914b96092514a35ae5f6d437ad27cc25020ac3 Mon Sep 17 00:00:00 2001
+From: asyncblink <asyncblink@protonmail.com>
+Date: Mon, 28 Nov 2016 07:12:25 +1300
+Subject: [PATCH] Glare additions
+
+
+diff --git a/pom.xml b/pom.xml
+index 532bebf..5aa259f 100644
+--- a/pom.xml
++++ b/pom.xml
+@@ -102,6 +102,7 @@
+ 
+     <!-- This builds a completely 'ready to start' jar with all dependencies inside -->
+     <build>
++        <finalName>sportbukkit-server</finalName>
+         <plugins>
+             <plugin>
+                 <groupId>net.md-5</groupId>
+@@ -247,6 +248,32 @@
+                     </excludes>
+                 </configuration>
+             </plugin>
++            <plugin>
++                <artifactId>maven-antrun-plugin</artifactId>
++                <version>1.8</version>
++                <executions>
++                    <execution>
++                        <phase>install</phase>
++                        <configuration>
++                            <target>
++                                <copy file="${project.build.directory}/${project.build.finalName}.jar"
++                                      todir="C:/SSD-Projects/Glare/Servers/US-0"/>
++                                <copy file="${project.build.directory}/${project.build.finalName}.jar"
++                                      todir="C:/SSD-Projects/Glare/Servers/US-1"/>
++                                <copy file="${project.build.directory}/${project.build.finalName}.jar"
++                                      todir="C:/SSD-Projects/Glare/Servers/US-2"/>
++                                <copy file="${project.build.directory}/${project.build.finalName}.jar"
++                                      todir="C:/SSD-Projects/Glare/Servers/US-3"/>
++                                <copy file="${project.build.directory}/${project.build.finalName}.jar"
++                                      todir="C:/SSD-Projects/Glare/.lib"/>
++                            </target>
++                        </configuration>
++                        <goals>
++                            <goal>run</goal>
++                        </goals>
++                    </execution>
++                </executions>
++            </plugin>
+         </plugins>
+     </build>
+ </project>
+diff --git a/src/main/java/com/liquiddonut/CustomData.java b/src/main/java/com/liquiddonut/CustomData.java
+new file mode 100644
+index 0000000..a85a4ee
+--- /dev/null
++++ b/src/main/java/com/liquiddonut/CustomData.java
+@@ -0,0 +1,6 @@
++package com.liquiddonut;
++
++public class CustomData {
++    public void onGet() {}
++    public void onTick() {}
++}
+diff --git a/src/main/java/com/liquiddonut/CustomObject.java b/src/main/java/com/liquiddonut/CustomObject.java
+new file mode 100644
+index 0000000..a4c26d1
+--- /dev/null
++++ b/src/main/java/com/liquiddonut/CustomObject.java
+@@ -0,0 +1,15 @@
++package com.liquiddonut;
++
++public class CustomObject {
++    public CustomData livePlayer = null;
++
++    public void callTick() {
++        try {
++            if (livePlayer != null) {
++                livePlayer.onTick();
++            }
++        } catch (Exception ex) {
++            ex.printStackTrace();
++        }
++    }
++}
+diff --git a/src/main/java/com/liquiddonut/XORShiftRNG.java b/src/main/java/com/liquiddonut/XORShiftRNG.java
+new file mode 100644
+index 0000000..aa1e0d1
+--- /dev/null
++++ b/src/main/java/com/liquiddonut/XORShiftRNG.java
+@@ -0,0 +1,91 @@
++package com.liquiddonut;
++
++
++import java.util.Random;
++import java.util.concurrent.locks.ReentrantLock;
++
++/**
++ * <p>
++ * Very fast pseudo random number generator. See <a href=
++ * "http://school.anhb.uwa.edu.au/personalpages/kwessen/shared/Marsaglia03.html"
++ * >this page</a> for a description. This RNG has a period of about 2^160, which
++ * is not as long as the {@link MersenneTwisterRNG} but it is faster.
++ * </p>
++ *
++ * <p>
++ * <em>NOTE: Because instances of this class require 160-bit seeds, it is not
++ * possible to seed this RNG using the {@link #setSeed(long)} method inherited
++ * from {@link Random}.  Calls to this method will have no effect.
++ * Instead the seed must be set by a constructor.</em>
++ * </p>
++ *
++ * @author Daniel Dyer
++ * @since 1.2
++ */
++public class XORShiftRNG extends Random {
++    private final ReentrantLock lock = new ReentrantLock();
++
++    private final byte[] seed;
++
++    private int state1;
++    private int state2;
++    private int state3;
++    private int state4;
++    private int state5;
++
++    public XORShiftRNG() {
++        this.seed = new byte[SEED_SIZE_BYTES];
++        SEED_GENERATOR.nextBytes(seed);
++        int[] state = convertBytesToInts(seed);
++        this.state1 = state[0];
++        this.state2 = state[1];
++        this.state3 = state[2];
++        this.state4 = state[3];
++        this.state5 = state[4];
++    }
++
++    public byte[] getSeed() {
++        return seed.clone();
++    }
++
++    @Override
++    protected int next(int bits) {
++        try {
++            lock.lock();
++            int t = (state1 ^ (state1 >> 7));
++            state1 = state2;
++            state2 = state3;
++            state3 = state4;
++            state4 = state5;
++            state5 = (state5 ^ (state5 << 6)) ^ (t ^ (t << 13));
++            int value = (state2 + state2 + 1) * state5;
++            return value >>> (32 - bits);
++        } finally {
++            lock.unlock();
++        }
++    }
++
++    // Mask for casting a byte to an int, bit-by-bit (with
++    // bitwise AND) with no special consideration for the sign bit.
++    private static final int BITWISE_BYTE_TO_INT = 0x000000FF;
++
++    private static Random SEED_GENERATOR = new Random();
++    private static final int SEED_SIZE_BYTES = 20; // Needs 5 32-bit integers.
++    private static final long serialVersionUID = -1843001897066722618L;
++
++    public static int convertBytesToInt(byte[] bytes, int offset) {
++        return (BITWISE_BYTE_TO_INT & bytes[offset + 3]) | ((BITWISE_BYTE_TO_INT & bytes[offset + 2]) << 8)
++                | ((BITWISE_BYTE_TO_INT & bytes[offset + 1]) << 16) | ((BITWISE_BYTE_TO_INT & bytes[offset]) << 24);
++    }
++
++    public static int[] convertBytesToInts(byte[] bytes) {
++        if (bytes.length % 4 != 0) {
++            throw new IllegalArgumentException("Number of input bytes must be a multiple of 4.");
++        }
++        int[] ints = new int[bytes.length / 4];
++        for (int i = 0; i < ints.length; i++) {
++            ints[i] = convertBytesToInt(bytes, i * 4);
++        }
++        return ints;
++    }
++}
+\ No newline at end of file
+diff --git a/src/main/java/net/minecraft/server/Chunk.java b/src/main/java/net/minecraft/server/Chunk.java
+index 5b239d7..5671e05 100644
+--- a/src/main/java/net/minecraft/server/Chunk.java
++++ b/src/main/java/net/minecraft/server/Chunk.java
+@@ -11,13 +11,15 @@ import java.util.Map;
+ import java.util.Random;
+ import java.util.concurrent.ConcurrentLinkedQueue;
+ import javax.annotation.Nullable;
++
++import com.liquiddonut.CustomObject;
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+ 
+ import com.google.common.collect.Lists; // CraftBukkit
+ import org.bukkit.Server; // CraftBukkit
+ 
+-public class Chunk {
++public class Chunk extends CustomObject { // Glare Modify (extends CustomObject) [ Super metadata ]
+ 
+     private static final Logger e = LogManager.getLogger();
+     public static final ChunkSection a = null;
+diff --git a/src/main/java/net/minecraft/server/Entity.java b/src/main/java/net/minecraft/server/Entity.java
+index 54f0226..8141b0c 100644
+--- a/src/main/java/net/minecraft/server/Entity.java
++++ b/src/main/java/net/minecraft/server/Entity.java
+@@ -50,8 +50,12 @@ import org.bukkit.plugin.PluginManager;
+ import com.google.common.collect.Range;
+ // SportBukkit end
+ 
++// Glare start
++import com.liquiddonut.CustomObject;
++// Glare end
+ 
+-public abstract class Entity implements ICommandListener {
++
++public abstract class Entity extends CustomObject implements ICommandListener { // Glare Modify (extends CustomObject) [ Super metadata ]
+ 
+     // CraftBukkit start
+     private static final int CURRENT_LEVEL = 2;
+@@ -309,6 +313,7 @@ public abstract class Entity implements ICommandListener {
+ 
+     public void U() {
+         this.world.methodProfiler.a("entityBaseTick");
++        this.callTick(); // Glare Addition [ Tick supermeta ]
+         if (this.isPassenger() && this.bB().dead) {
+             this.stopRiding();
+         }
+diff --git a/src/main/java/net/minecraft/server/LoginListener.java b/src/main/java/net/minecraft/server/LoginListener.java
+index 957756c..401bc48 100644
+--- a/src/main/java/net/minecraft/server/LoginListener.java
++++ b/src/main/java/net/minecraft/server/LoginListener.java
+@@ -27,6 +27,9 @@ import org.bukkit.craftbukkit.util.Waitable;
+ import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
+ import org.bukkit.event.player.PlayerPreLoginEvent;
+ // CraftBukkit end
++// Glare start
++import com.liquiddonut.CustomData;
++// Glare end
+ 
+ public class LoginListener implements PacketLoginInListener, ITickable {
+ 
+@@ -43,6 +46,7 @@ public class LoginListener implements PacketLoginInListener, ITickable {
+     private SecretKey loginKey;
+     private EntityPlayer l;
+     public String hostname = ""; // CraftBukkit - add field
++    public CustomData livePlayer = null; // Glare Addition [ Custom data bypass ]
+ 
+     public LoginListener(MinecraftServer minecraftserver, NetworkManager networkmanager) {
+         this.g = LoginListener.EnumProtocolState.HELLO;
+diff --git a/src/main/java/net/minecraft/server/PlayerList.java b/src/main/java/net/minecraft/server/PlayerList.java
+index 46e30b2..b662faa 100644
+--- a/src/main/java/net/minecraft/server/PlayerList.java
++++ b/src/main/java/net/minecraft/server/PlayerList.java
+@@ -486,6 +486,9 @@ public abstract class PlayerList {
+         SocketAddress socketaddress = loginlistener.networkManager.getSocketAddress();
+ 
+         EntityPlayer entity = new EntityPlayer(server, server.getWorldServer(0), gameprofile, new PlayerInteractManager(server.getWorldServer(0)));
++        //Glare start
++        entity.livePlayer = loginlistener.livePlayer;
++        loginlistener.livePlayer = null;
+         entity.playerConnection = new PlayerConnection(server, loginlistener.networkManager, entity); // SportBukkit - create this right away so it's never null
+         entity.hostname = hostname;
+         entity.protocolVersion = loginlistener.networkManager.protocolVersion; // Can't reach NetworkManager through CraftPlayer at this point, so copy the value
+diff --git a/src/main/java/net/minecraft/server/WorldServer.java b/src/main/java/net/minecraft/server/WorldServer.java
+index 2ab570f..bbe397e 100644
+--- a/src/main/java/net/minecraft/server/WorldServer.java
++++ b/src/main/java/net/minecraft/server/WorldServer.java
+@@ -403,6 +403,7 @@ public class WorldServer extends World implements IAsyncTaskHandler {
+                 this.methodProfiler.c("checkNextLight");
+                 chunk.n();
+                 this.methodProfiler.c("tickChunk");
++                chunk.callTick(); // Glare addition [ Super metadata ]
+                 chunk.b(false);
+                 this.methodProfiler.c("thunder");
+                 int l;
+-- 
+2.10.2.windows.1
+

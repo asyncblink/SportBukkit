@@ -1,11 +1,11 @@
-From 6aed21a6ebc930405dd282c0cb77b064d82342e6 Mon Sep 17 00:00:00 2001
+From 7ff8fe47a18fe06e4580720106e42b989bc3b196 Mon Sep 17 00:00:00 2001
 From: Jedediah Smith <jedediah@silencegreys.com>
 Date: Fri, 9 May 2014 23:48:01 -0400
 Subject: [PATCH] Add API to disable potion particles
 
 
 diff --git a/src/main/java/net/minecraft/server/EntityLiving.java b/src/main/java/net/minecraft/server/EntityLiving.java
-index 503d991..1a46ba8 100644
+index d9f74e5..519bc2e 100644
 --- a/src/main/java/net/minecraft/server/EntityLiving.java
 +++ b/src/main/java/net/minecraft/server/EntityLiving.java
 @@ -29,6 +29,8 @@ import org.bukkit.event.entity.EntityRegainHealthEvent;
@@ -79,5 +79,5 @@ index 19d946b..60adcf7 100644
          return launchProjectile(projectile, null);
      }
 -- 
-1.9.0
+2.10.2.windows.1
 
